@@ -112,7 +112,8 @@ textarea{resize:none;height:130px;font:1.28rem/1.5 'Caveat',cursive}
 .pw{display:flex;flex-direction:column;align-items:center;gap:18px}
 .pol{background:var(--paper-2);padding:12px;border:2.5px solid var(--ink);border-radius:6px;width:min(290px,82vw);box-shadow:5px 5px 0 var(--ink);transform:rotate(var(--tilt,0deg));animation:polIn .5s cubic-bezier(.34,1.4,.64,1)}
 @keyframes polIn{from{opacity:0;transform:rotate(var(--tilt)) scale(.4) translateY(40px)}}
-.pp{height:150px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:64px;border:2px solid var(--ink)}
+.pp{height:210px;border-radius:3px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:64px;border:2px solid var(--ink)}
+.pp img{width:100%;height:100%;object-fit:cover;display:block}
 .pm{font:600 1.35rem/1.25 'Caveat',cursive;text-align:center;padding:14px 6px 6px;min-height:80px;display:flex;align-items:center;justify-content:center}
 
 /* final */
@@ -272,13 +273,21 @@ const RELS=[{k:'friend',l:'👊 Male friend'},{k:'bf',l:'💙 Boyfriend'},{k:'da
 
 /* personalised balloon messages — {n} = his name */
 const BAL={
- friend:["Happy Men's Day, {n}. Legend status confirmed.","You show up. Every single time. That's rare.","Best late-night talks always start with you.","Thanks for being the friend who never keeps score.","Stay awesome, {n}. I've got your back."],
- bf:["Happy Men's Day, {n}. My favourite human.","You make ordinary days feel like a good movie.","Thanks for the patience. And the snacks.","Strong and gentle. Such a rare combo.","It's okay to rest. I've got you too."],
- dad:["Happy Men's Day, {n}. Today, you get the credit.","Everything I know about strength, I learned from you.","Thank you for the sacrifices I only understood later.","Rest a little today. You've earned it.","Proud to be your child. Always."],
- bro:["Happy Men's Day, {n}. Partner in crime.","We fight, we laugh, we forget why. Classic us.","You're the first person I'd call. Always.","Annoying? Yes. Replaceable? Never.","Whatever happens, I'm in your corner."]
+ friend:["Happy Men's Day, {n}. Get over here. You've earned this hug.","YAY! The whole squad is cheering for you today, {n}.","Dance like nobody's watching. Today is your day.","Running from your to-do list? Go. I'll cover for you.","Real ones stick together. Proud to be in your gang."],
+ bf:["Happy Men's Day, {n}. Come here. You get the biggest hug today.","YAY! Someone is celebrating you loudly today, {n}.","Dance with me later? You pick the song.","Run from your to-do list today. I'll cover for you.","My favourite team will always be you and me."],
+ dad:["Happy Men's Day, {n}. This hug is long overdue.","YAY! The whole family is cheering for you today.","Play your favourite song and dance a little. You've earned it.","Run from the to-do list today. We'll handle the rest.","We're always in your corner. Thank you for everything."],
+ bro:["Happy Men's Day, {n}. Get over here. Yes, a hug. Deal with it.","YAY! Loudest cheering section is right here, {n}.","Dance? You? Please do. I need it on video.","Running from responsibilities? Go. I'll say you're busy.","We fight, we laugh, we forget why. Always in your corner."]
 };
-const EMO=['🏆','💪','🎯','🔥','🤝'];
+const EMO=['🤗','🎉','💃','🚲','🐾'];
 const EMOBG=['#FFF0BF','#DBE7FF','#FFDADC','#FFE3C2','#CFF3EE'];
+/* one GIF per balloon, in pop order */
+const GIFS=[
+ 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdG9maW5wYW5hcTRsNnV6dDJpbmpmcWpxY3RhcjJqcmZvYjdyb3gzdiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/TIG6XFVuOriidsTsdu/giphy.gif',
+ 'https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3d3o5b3h3bG1jdG5pendmbmx5dGR6ZjJzcDZuMXZjMnFicTAwbmJzciZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PklKBQ4bj7XXRHByqs/giphy.gif',
+ 'https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3cDA5b3MxdThiZWZxMXY3dm50eHF1bWtvd2Yzdmw2d3JiYTkzbTU3dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cbD4NSXZutjebF8cd8/giphy.gif',
+ 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXRhZHRpYmg4Z3h6YWkyeGpidHVibndkaGlzNmFsbW91ems2MWZ2biZlcD12MV9naWZzX3NlYXJjaCZjdD1n/GOeFqBsdplHseqWctY/giphy.gif',
+ 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5hZmxycm5qOTBiN2ppMmlxMTdzN2NlcG92dnlvbjJ1dXI0dzdxbCZlcD12MV9naWZzX3JlbGF0ZWQmY3Q9Zw/dLaD9DFaWRE0vFfWry/giphy.gif'
+];
 
 /* AI Write drafts per relation + tone */
 const DRAFT={
@@ -362,7 +371,7 @@ const PAL=[{b:'#2563EB',s:'#93B4FF',d:'#173FA0'},{b:'#FF8A1F',s:'#FFC48A',d:'#B8
 const TILT=[-3,2.5,-4,3,-2],SPK=['#FFF0BF','#FFC845','#FF8A1F','#2563EB','#0EB5A6','#0B1B3A'];
 let msgs=[],left=0,all=false;
 function bsvg(p,i){return `<defs><radialGradient id="g${i}" cx="38%" cy="30%" r="66%"><stop offset="0%" stop-color="${p.s}"/><stop offset="55%" stop-color="${p.b}"/><stop offset="100%" stop-color="${p.d}"/></radialGradient></defs><ellipse cx="50" cy="52" rx="38" ry="44" fill="url(#g${i})" stroke="#0B1B3A" stroke-width="2"/><ellipse cx="35" cy="34" rx="11" ry="8" fill="rgba(255,255,255,.4)" transform="rotate(-25 35 34)"/><polygon points="50,93 44,100 56,100" fill="${p.d}" stroke="#0B1B3A" stroke-width="1.5"/>`}
-function toBalloons(){typing=false;msgs=BAL[S.rel].map(m=>fill(m,S.recipient));go('s-bal');build()}
+function toBalloons(){typing=false;GIFS.forEach(u=>{new Image().src=u});msgs=BAL[S.rel].map(m=>fill(m,S.recipient));go('s-bal');build()}
 function count(){$('bcount').textContent=left<=0?'All popped! 🎉':left===msgs.length?'Each one has a message for you':left+' left to pop'}
 function build(){
   all=false;const f=$('bfield');f.innerHTML='';left=msgs.length;count();
@@ -387,7 +396,8 @@ function pop(i,el){
     const s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start()}catch(e){}
   if(left<=0){all=true;$('pnext').textContent='See the surprise 🎉'}else $('pnext').textContent='Pop another ↗';
   $('pol').style.setProperty('--tilt',TILT[i]+'deg');
-  $('pp').textContent=EMO[i];$('pp').style.background=EMOBG[i];
+  const pp=$('pp');pp.style.background=EMOBG[i];pp.textContent='';
+  const g=new Image();g.alt='';g.onerror=()=>{pp.textContent=EMO[i]};g.src=GIFS[i];pp.appendChild(g);
   $('pm').textContent=msgs[i];
   $('reveal').classList.add('show');
 }
