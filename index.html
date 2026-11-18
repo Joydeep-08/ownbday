@@ -69,6 +69,10 @@ textarea{resize:none;height:130px;font:1.28rem/1.5 'Caveat',cursive}
 .spinner{width:24px;height:24px;border-radius:50%;border:3px solid var(--yellow-soft);border-top-color:var(--ink);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* music toggle */
+#mute{display:none;position:fixed;top:14px;right:14px;z-index:900;width:46px;height:46px;border-radius:50%;border:2.5px solid var(--ink);background:var(--yellow);box-shadow:3px 3px 0 var(--ink);font-size:20px;align-items:center;justify-content:center;cursor:pointer;transition:.12s}
+#mute:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+
 /* lock screen */
 .phone{border:2.5px solid var(--ink);border-radius:20px;padding:26px 16px 24px;background:linear-gradient(180deg,#0B1B3A,#1E3A8A 60%,#2563EB);display:flex;flex-direction:column;align-items:center;box-shadow:5px 5px 0 var(--ink)}
 .clock{text-align:center;color:#fff;margin-bottom:20px}
@@ -135,6 +139,10 @@ textarea{resize:none;height:130px;font:1.28rem/1.5 'Caveat',cursive}
 </head>
 <body>
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<!-- music toggle (appears once the song starts) -->
+<button id="mute" onclick="toggleMute()" aria-label="Toggle music">🔊</button>
+
 <div class="page">
   <div class="header" id="head">
     <div class="eyebrow">International Men's Day · 19 November</div>
@@ -171,7 +179,7 @@ textarea{resize:none;height:130px;font:1.28rem/1.5 'Caveat',cursive}
       </div>
       <div class="gap">
         <div class="label">A photo of him (optional)</div>
-        <div class="drop" id="drop"><input type="file" id="file" accept="image/*"><div style="font-size:1.6rem">📸</div><b>Tap to add a photo</b><br>Shows in the letter and the final reveal</div>
+        <div class="drop" id="drop"><input type="file" id="file" accept="image/*"><div style="font-size:1.6rem">📸</div><b>Tap to add a photo</b><br>Shows in the final reveal</div>
         <img class="pv" id="pv" alt="">
         <button class="ghost sm" id="rm" style="display:none;margin:10px auto 0" onclick="rmPhoto()">✕ Remove photo</button>
       </div>
@@ -269,6 +277,10 @@ const RAZORPAY_KEY='rzp_live_TSh2h315sL2Y4W';
 const TABLE='mens_day', BASE_PRICE=79;
 const COUPONS={'HERO':0,'HERO1':1,'MEN59':59};
 
+/* local files (keep these next to this HTML file) */
+const LETTER_PHOTO='photo.jpeg';
+const SONG_FILE='song.mp3';
+
 const RELS=[{k:'friend',l:'👊 Male friend'},{k:'bf',l:'💙 Boyfriend'},{k:'dad',l:'🧢 Father'},{k:'bro',l:'🤝 Brother'}];
 
 /* personalised balloon messages — {n} = his name */
@@ -303,6 +315,35 @@ let rel='friend', tone='wholesome', photo=null, S={}, price=BASE_PRICE, coupon=n
 const $=id=>document.getElementById(id);
 const fill=(t,n)=>t.replace(/\{n\}/g,n);
 
+/* ---------- background song ---------- */
+const song=new Audio(SONG_FILE);
+song.loop=true;song.preload='auto';song.volume=.7;
+let songWanted=false;
+function unlockSong(){
+  if(songWanted)song.play().then(removeUnlock).catch(()=>{});
+}
+const UNLOCK_EVENTS=['pointerdown','touchstart','keydown','click'];
+function removeUnlock(){UNLOCK_EVENTS.forEach(e=>document.removeEventListener(e,unlockSong))}
+function startSong(){
+  songWanted=true;
+  $('mute').style.display='flex';
+  const p=song.play();
+  if(p&&p.catch){
+    p.catch(()=>{ /* autoplay blocked: start on the first tap/click/key */
+      removeUnlock();UNLOCK_EVENTS.forEach(e=>document.addEventListener(e,unlockSong));
+    });
+  }
+}
+function stopSong(){
+  songWanted=false;removeUnlock();
+  song.pause();song.currentTime=0;
+  $('mute').style.display='none';
+}
+function toggleMute(){
+  song.muted=!song.muted;
+  $('mute').textContent=song.muted?'🔇':'🔊';
+}
+
 /* chips + tones */
 RELS.forEach((r,i)=>{const b=document.createElement('button');b.className='chip'+(i?'':' sel');b.textContent=r.l;b.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));b.classList.add('sel');rel=r.k};$('chips').appendChild(b)});
 $('tones').onclick=e=>{const t=e.target.closest('.tone');if(!t)return;document.querySelectorAll('.tone').forEach(x=>x.classList.remove('active'));t.classList.add('active');tone=t.dataset.t};
@@ -312,7 +353,7 @@ function writeIt(){
   setTimeout(()=>{const n=$('rName').value.trim()||'you';const ta=$('msg');ta.value=fill(DRAFT[rel][tone],n);$('cc').textContent=ta.value.length;b.disabled=false;b.textContent='✦ Write it for me'},800);
 }
 
-/* photo */
+/* photo (sender's upload: used in the final reveal only) */
 $('file').onchange=e=>{
   const f=e.target.files[0];if(!f)return;
   const r=new FileReader();r.onload=ev=>{const im=new Image();im.onload=()=>{
@@ -327,14 +368,22 @@ const toBlob=d=>{const[m,b]=d.split(',');const bin=atob(b),a=new Uint8Array(bin.
 
 /* nav */
 function go(id){document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));const e=$(id);e.classList.remove('active');void e.offsetWidth;e.classList.add('active')}
-function restart(){$('head').style.display='block';go('s-intake')}
+function restart(){stopSong();$('head').style.display='block';go('s-intake')}
 
 /* preview: fill everything, start at lock screen */
 function setup(){
   $('nSender').textContent=S.sender;
   $('lName').textContent=S.recipient;$('lSender').textContent=S.sender;
-  const ph=S.photo?`<img src="${S.photo}" alt="">`:'🏆';
-  $('lph').innerHTML=ph;$('fph').innerHTML=ph;
+
+  /* letter photo is always the local photo.jpeg (emoji fallback if the file is missing) */
+  const lp=$('lph');lp.textContent='';
+  const li=new Image();li.alt='';
+  li.onerror=()=>{lp.textContent='🏆'};
+  li.src=LETTER_PHOTO;
+  lp.appendChild(li);
+
+  /* final reveal keeps the sender's uploaded photo */
+  $('fph').innerHTML=S.photo?`<img src="${S.photo}" alt="">`:'🏆';
   $('fcap').textContent=`${S.sender} & ${S.recipient}`;
   $('fq').textContent=QUOTES[Math.floor(Math.random()*QUOTES.length)];
 }
@@ -349,13 +398,14 @@ function goNotif(){
   $('head').style.display='none';
   const c=$('s-notif');c.querySelectorAll('.notif').forEach(n=>{n.style.animation='none';void n.offsetWidth;n.style.animation=''});
   go('s-notif');
+  startSong();
 }
 setInterval(()=>{const d=new Date();let h=d.getHours()%12||12;$('clk').textContent=h+':'+String(d.getMinutes()).padStart(2,'0')},15000);
 (()=>{const d=new Date();$('clk').textContent=(d.getHours()%12||12)+':'+String(d.getMinutes()).padStart(2,'0')})();
 
 /* letter typewriter */
 let typing=false;
-function openNotif(){go('s-letter');typeLetter(S.message)}
+function openNotif(){go('s-letter');typeLetter(S.message);startSong()}
 function typeLetter(t){
   typing=true;const b=$('lBody');b.innerHTML='<span class="cur"></span>';const cur=b.firstChild;let i=0;
   (function tick(){
@@ -452,7 +502,7 @@ function copyLink(){const i=$('out');i.select();navigator.clipboard.writeText(i.
     setup();
     $('fAct').innerHTML='<button class="ghost" onclick="go(\'s-bal\')">← Back</button>';
     ['fRest','eN','eL','eB'].forEach(i=>$(i).style.display='none');
-    goNotif();
+    goNotif(); /* tries to play the song; if the browser blocks autoplay it starts on his first tap */
   }catch(e){console.error(e);alert("This link isn't loading. Check your connection and try again.")}
 })();
 </script>
